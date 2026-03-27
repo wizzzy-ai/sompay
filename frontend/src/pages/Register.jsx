@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -34,9 +34,21 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [redirectProgress, setRedirectProgress] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const redirectTimersRef = useRef([]);
+
+  useEffect(() => {
+    return () => {
+      redirectTimersRef.current.forEach((id) => {
+        clearTimeout(id);
+        clearInterval(id);
+      });
+      redirectTimersRef.current = [];
+    };
+  }, []);
 
   const onSubmit = async (data) => {
     if (loading) return;
@@ -69,15 +81,29 @@ const Register = () => {
 
       // Redirect to OTP verification (navigate + hard fallback in case router navigation fails)
       const otpPath = `/verify-otp?email=${encodeURIComponent(data.email)}`;
-      navigate(otpPath, { state: { email: data.email } });
-      setTimeout(() => {
+      setRedirectProgress(0);
+      const startedAt = Date.now();
+      const intervalId = setInterval(() => {
+        const p = Math.min(100, ((Date.now() - startedAt) / 900) * 100);
+        setRedirectProgress(p);
+        if (p >= 100) clearInterval(intervalId);
+      }, 40);
+      redirectTimersRef.current.push(intervalId);
+
+      const navId = setTimeout(() => {
+        navigate(otpPath, { state: { email: data.email } });
+      }, 450);
+      redirectTimersRef.current.push(navId);
+
+      const fallbackId = setTimeout(() => {
         const base = String(import.meta.env.BASE_URL || '/');
         const baseWithSlash = base.endsWith('/') ? base : `${base}/`;
         const fallbackUrl = `${baseWithSlash.replace(/\\/g, '/')}${otpPath.replace(/^\//, '')}`;
         if (window.location.pathname.includes('/register')) {
           window.location.assign(fallbackUrl);
         }
-      }, 900);
+      }, 1300);
+      redirectTimersRef.current.push(fallbackId);
     } catch (error) {
       const serverMessage = error.response?.data?.error || error.response?.data?.message;
       if (serverMessage) {
@@ -132,15 +158,24 @@ const Register = () => {
                     >
                       <CheckCircle size={64} />
                     </motion.div>
-                    <h2>Registration Successful!</h2>
-                    <p>Welcome to Sompay! Your account has been created successfully.</p>
-                    <p className="redirect-text">Redirecting to OTP verification...</p>
-                    <div className="success-animation">
-                      <div className="spinner"></div>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
+	                    <h2>Registration Successful!</h2>
+	                    <p>Welcome to Sompay! Your account has been created successfully.</p>
+	                    <p className="redirect-text">Redirecting to OTP verification...</p>
+	                    <div className="success-animation">
+	                      <div className="spinner" aria-hidden="true"></div>
+                        <div className="redirect-progress" aria-hidden="true">
+                          <div
+                            className="redirect-progress-bar"
+                            style={{ width: `${Math.round(redirectProgress)}%` }}
+                          ></div>
+                        </div>
+                        <div className="redirect-progress-text" aria-hidden="true">
+                          {Math.max(1, Math.round(redirectProgress))}%
+                        </div>
+	                    </div>
+	                  </motion.div>
+	                </motion.div>
+	              )}
             </AnimatePresence>
 
             <div className="register-header">
