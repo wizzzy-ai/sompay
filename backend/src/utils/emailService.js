@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import winston from 'winston';
+import { Resend } from 'resend';
 
 // Logger setup
 const logger = winston.createLogger({
@@ -19,14 +20,57 @@ const logger = winston.createLogger({
 
 // Create transporter
 const createTransporter = () => {
-	  return nodemailer.createTransport({
-	    service: 'gmail',
-	    auth: {
-	      user: process.env.EMAIL_USER,
-	      pass: String(process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, '')
-	    }
-	  });
-	};
+  const smtpHost = String(process.env.SMTP_HOST || '').trim();
+  const smtpPort = Number(process.env.SMTP_PORT || 0) || 0;
+  const smtpSecure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
+  const authUser = String(process.env.EMAIL_USER || '').trim();
+  const authPass = String(process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+
+  const baseOptions = {
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
+  };
+
+  if (smtpHost) {
+    return nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort || (smtpSecure ? 465 : 587),
+      secure: smtpSecure,
+      auth: authUser
+        ? {
+            user: authUser,
+            pass: authPass,
+          }
+        : undefined,
+      ...baseOptions,
+    });
+  }
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: authUser,
+      pass: authPass,
+    },
+    ...baseOptions,
+  });
+		};
+
+const sendViaResend = async ({ to, subject, html }) => {
+  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) throw new Error('Missing RESEND_API_KEY');
+
+  const resend = new Resend(apiKey);
+  const fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev';
+
+  await resend.emails.send({
+    from: `"${process.env.EMAIL_FROM_NAME || 'PSP Platform'}" <${fromEmail}>`,
+    to,
+    subject,
+    html,
+  });
+};
 
 export const sendVerificationEmail = async (to, otp, companyName) => {
 	  try {
@@ -70,7 +114,7 @@ export const sendVerificationEmail = async (to, otp, companyName) => {
             </div>
 
             <div class="warning">
-              <strong>⚠️ Important:</strong> This code will expire in 24 hours. Please use it promptly to verify your account.
+	              <strong>Important:</strong> This code will expire in 24 hours. Please use it promptly to verify your account.
             </div>
 
             <p>If you didn't request this registration, please ignore this email. Your account will not be activated without verification.</p>
@@ -89,9 +133,19 @@ export const sendVerificationEmail = async (to, otp, companyName) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    logger.info(`Verification email sent successfully to ${to} for company ${companyName}`);
-    return { success: true, messageId: info.messageId };
+      if (process.env.RESEND_API_KEY) {
+        await sendViaResend({
+          to,
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+        });
+        logger.info(`Verification email sent via Resend to ${to}`);
+        return { success: true, provider: 'resend' };
+      }
+
+	    const info = await transporter.sendMail(mailOptions);
+	    logger.info(`Verification email sent successfully to ${to} for company ${companyName}`);
+	    return { success: true, provider: 'smtp', messageId: info.messageId };
 
   } catch (error) {
     logger.error(`Failed to send verification email to ${to}: ${error.message}`);

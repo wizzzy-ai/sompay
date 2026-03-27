@@ -42,8 +42,12 @@ import { fileURLToPath } from 'node:url';
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '.env') });
-const app = express();
+	dotenv.config({ path: path.join(__dirname, '.env') });
+	const app = express();
+
+  // Render (and most PaaS) run behind a reverse proxy and set X-Forwarded-For.
+  // This is required for express-rate-limit (and req.ip) to work correctly.
+  app.set('trust proxy', 1);
 
 if (!process.env.JWT_ACCESS_SECRET) {
   // Auth will fail to mint/verify JWTs without this.

@@ -26,6 +26,9 @@ import planRoutes from './routes/plans.js';
 
 const app = express();
 
+// Required when running behind a proxy (Render) so rate-limits use the correct client IP.
+app.set('trust proxy', 1);
+
 if (!process.env.JWT_ACCESS_SECRET) {
   console.warn('Warning: JWT_ACCESS_SECRET is not set. Login/protected routes will fail.');
 }
