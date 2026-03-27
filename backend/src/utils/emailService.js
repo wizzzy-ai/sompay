@@ -19,24 +19,25 @@ const logger = winston.createLogger({
 
 // Create transporter
 const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_APP_PASSWORD
-    }
-  });
-};
+	  return nodemailer.createTransport({
+	    service: 'gmail',
+	    auth: {
+	      user: process.env.EMAIL_USER,
+	      pass: String(process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, '')
+	    }
+	  });
+	};
 
 export const sendVerificationEmail = async (to, otp, companyName) => {
-  try {
-    const transporter = createTransporter();
+	  try {
+	    const transporter = createTransporter();
+      const fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@localhost';
 
-    const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'PSP Platform'}" <${process.env.EMAIL_FROM || 'noreply@yourdomain.com'}>`,
-      to: to,
-      subject: 'Verify Your Company Account - PSP Platform',
-      html: `
+	    const mailOptions = {
+	      from: `"${process.env.EMAIL_FROM_NAME || 'PSP Platform'}" <${fromEmail}>`,
+	      to: to,
+	      subject: 'Verify your email - PSP Platform',
+	      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -60,7 +61,7 @@ export const sendVerificationEmail = async (to, otp, companyName) => {
 
           <div class="content">
             <h2>Hello ${companyName}!</h2>
-            <p>Thank you for registering your company with PSP Platform. To complete your registration and start using our services, please verify your email address.</p>
+	            <p>Thanks for creating your PSP Platform account. Please verify your email address to complete registration.</p>
 
             <p>Your verification code is:</p>
 

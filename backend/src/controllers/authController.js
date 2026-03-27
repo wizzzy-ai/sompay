@@ -77,13 +77,17 @@ export const register = async (req, res) => {
 
     // send OTP via Gmail SMTP (don't fail registration if email fails)
     try {
-      await sendVerificationEmail(email, otp, name);
+      await sendVerificationEmail(normalizedEmail, otp, user.name || name);
     } catch (emailError) {
       console.error('Failed to send OTP email:', emailError);
       // Continue with registration even if email fails
     }
 
-    res.json({ message: "User created. Check your email for OTP." });
+    res.json({
+      message: "User created. Check your email for OTP.",
+      email: normalizedEmail,
+      next: 'verify_otp',
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -91,33 +95,74 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  try {
-    if (!process.env.JWT_ACCESS_SECRET) {
-      return res.status(500).json({ error: 'Server misconfigured: JWT_ACCESS_SECRET is missing' });
-    }
+	  try {
+	    if (!process.env.JWT_ACCESS_SECRET) {
+	      return res.status(500).json({ error: 'Server misconfigured: JWT_ACCESS_SECRET is missing' });
+	    }
 
-    const normalizedEmail = String(req.body?.email || '').toLowerCase().trim();
+	    const normalizedEmail = String(req.body?.email || '').toLowerCase().trim();
+	    const rawPassword = String(req.body?.password ?? '');
+	    if (!normalizedEmail || !rawPassword) {
+	      return res.status(400).json({ error: 'Email and password are required' });
+	    }
 
-    const [companyAccount, adminAccount] = await Promise.all([
-      Company.findOne({ email: normalizedEmail }).select('_id email'),
-      Admin.findOne({ email: normalizedEmail }).select('_id email'),
-    ]);
+	    const [companyAccount, adminAccount] = await Promise.all([
+	      Company.findOne({ email: normalizedEmail }).select('_id email'),
+	      Admin.findOne({ email: normalizedEmail }).select('_id email'),
+	    ]);
 
     if (companyAccount) return res.status(403).json({ error: "Please use Company Login for this email" });
     if (adminAccount) return res.status(403).json({ error: "Please use Admin Login for this email" });
 
-    const user = await User.findOne({ email: normalizedEmail }).populate('company', 'name');
-    if (!user) return res.status(404).json({ error: "User not found" });
+	    const user = await User.findOne({ email: normalizedEmail }).populate('company', 'name');
+	    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (!user.isVerified) return res.status(403).json({ error: "Account not verified" });
-    if (user.status === 'inactive') return res.status(403).json({ error: "Account suspended" });
+	    if (!user.isVerified) return res.status(403).json({ error: "Account not verified" });
+	    if (user.status === 'inactive') return res.status(403).json({ error: "Account suspended" });
 
-    const match = await bcrypt.compare(req.body.password, user.password);
-    if (!match) return res.status(401).json({ error: "Invalid credentials" });
+	    const storedHash = user.password || user.passwordHash;
+	    if (!storedHash) {
+	      logger.warn('Login failed: user has no password hash', { userId: user._id?.toString(), email: normalizedEmail });
+	      return res.status(401).json({ error: "Invalid credentials" });
+	    }
 
-    const accessToken = jwt.sign(
-      { id: user._id, userType: 'user' },
-      process.env.JWT_ACCESS_SECRET,
+	    let match = false;
+	    try {
+	      match = await bcrypt.compare(rawPassword, storedHash);
+	    } catch (compareError) {
+	      logger.error('Password compare failed', {
+	        userId: user._id?.toString(),
+	        email: normalizedEmail,
+	        message: compareError?.message,
+	      });
+	      return res.status(401).json({ error: "Invalid credentials" });
+	    }
+
+	    if (!match) {
+	      logger.info('Login failed: wrong password', { userId: user._id?.toString(), email: normalizedEmail });
+	      return res.status(401).json({ error: "Invalid credentials" });
+	    }
+
+	    // Optional one-time migration: if this user still has a legacy passwordHash, copy it into password.
+	    if (!user.password && user.passwordHash) {
+	      try {
+	        await User.updateOne(
+	          { _id: user._id },
+	          { $set: { password: user.passwordHash }, $unset: { passwordHash: 1 } },
+	          { strict: false }
+	        );
+	      } catch (migrationError) {
+	        logger.warn('Password hash migration skipped', {
+	          userId: user._id?.toString(),
+	          email: normalizedEmail,
+	          message: migrationError?.message,
+	        });
+	      }
+	    }
+
+	    const accessToken = jwt.sign(
+	      { id: user._id, userType: 'user' },
+	      process.env.JWT_ACCESS_SECRET,
       { expiresIn: "15m" }
     );
 
