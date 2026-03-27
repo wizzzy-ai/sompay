@@ -86,16 +86,14 @@ const Register = () => {
       setRedirectProgress(0);
       const startedAt = Date.now();
       const intervalId = setInterval(() => {
-        const p = Math.min(100, ((Date.now() - startedAt) / 900) * 100);
+        const p = Math.min(100, ((Date.now() - startedAt) / 450) * 100);
         setRedirectProgress(p);
         if (p >= 100) clearInterval(intervalId);
       }, 40);
       redirectTimersRef.current.push(intervalId);
 
-      const navId = setTimeout(() => {
-        navigate(otpPath, { state: { email: data.email } });
-      }, 450);
-      redirectTimersRef.current.push(navId);
+      // Navigate immediately (faster UX), keep fallback for edge cases.
+      navigate(otpPath, { state: { email: data.email }, replace: true });
 
       const fallbackId = setTimeout(() => {
         const base = String(import.meta.env.BASE_URL || '/');
@@ -104,7 +102,7 @@ const Register = () => {
         if (window.location.pathname.includes('/register')) {
           window.location.assign(fallbackUrl);
         }
-      }, 1300);
+      }, 850);
       redirectTimersRef.current.push(fallbackId);
     } catch (error) {
       const serverMessage = error.response?.data?.error || error.response?.data?.message;
