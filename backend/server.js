@@ -50,21 +50,25 @@ if (!process.env.JWT_ACCESS_SECRET) {
   // (Kept as warning so the server can still boot for non-auth endpoints.)
   console.warn('Warning: JWT_ACCESS_SECRET is not set. Login/protected routes will fail.');
 }
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
+const allowedOrigins = (
+  process.env.FRONTEND_ORIGIN ||
+  process.env.FRONTEND_URL ||
+  'http://localhost:5173'
+)
+	  .split(',')
+	  .map(o => o.trim())
+	  .filter(Boolean);
 
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With']
-}));
+	  origin: (origin, cb) => {
+	    if (!origin) return cb(null, true);
+	    if (allowedOrigins.includes(origin)) return cb(null, true);
+	    return cb(new Error(`CORS blocked for origin: ${origin}`));
+	  },
+	  credentials: true,
+	  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+	  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With']
+	}));
 app.use(helmet());
 app.use(passport.initialize());
 // Logger setup
