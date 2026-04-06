@@ -13,6 +13,7 @@ const Footer = () => {
             {/* Company Info */}
             <div className="footer-column">
               <div className="footer-logo">
+                <img className="footer-logo-img" src="/sompay-icon-transparent.png" alt="Sompay" />
                 <span className="logo-text">Sompay</span>
                 <span className="logo-badge">PSP</span>
               </div>

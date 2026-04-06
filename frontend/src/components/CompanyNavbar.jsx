@@ -43,6 +43,7 @@ const CompanyNavbar = () => {
         <div className="navbar-content">
           <Link to="/company/dashboard" className="navbar-logo">
             <motion.div className="logo-wrapper" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <img className="brand-logo-icon" src="/sompay-icon-transparent.png" alt="Sompay" />
               <span className="logo-text">Sompay</span>
               <span className="logo-badge">COMPANY</span>
             </motion.div>
@@ -154,4 +155,3 @@ const CompanyNavbar = () => {
 };
 
 export default CompanyNavbar;
-

@@ -21,7 +21,7 @@
 }
 
 .public-navbar-content {
-  min-height: 72px;
+  min-height: 88px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -33,6 +33,15 @@
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
+}
+
+.public-logo-img {
+  height: 100px;
+  width: auto;
+  max-width: 500px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 20px rgba(17, 24, 39, 0.12));
 }
 
 .public-logo-mark {
@@ -292,6 +301,11 @@
   .public-navbar-links,
   .public-navbar-actions {
     display: none;
+  }
+
+  .public-logo-img {
+    height: 52px;
+    max-width: 320px;
   }
 
   .public-mobile-menu-toggle {

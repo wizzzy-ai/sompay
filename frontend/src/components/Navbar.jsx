@@ -41,11 +41,7 @@ const Navbar = () => {
       <div className="container">
         <div className="public-navbar-content">
           <Link to="/" className="public-navbar-logo">
-            <span className="public-logo-mark">S</span>
-            <div className="public-logo-wrapper">
-              <span className="public-logo-text">Sompay</span>
-              <span className="public-logo-badge">PSP</span>
-            </div>
+            <img className="public-logo-img" src="/sompay-logo-transparent.png" alt="Sompay" />
           </Link>
 
           <div className="public-navbar-links">

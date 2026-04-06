@@ -29,6 +29,14 @@
   margin-bottom: 0.5rem;
 }
 
+.footer-logo-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+}
+
 .footer-logo .logo-text {
   font-family: var(--font-heading);
   font-size: 1.5rem;

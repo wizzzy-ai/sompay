@@ -110,7 +110,7 @@ const Login = () => {
           <div className="login-header">
             <div className="login-logo">
               <div className="logo-inner">
-                <Fingerprint size={32} />
+                <img className="login-brand-icon" src="/sompay-icon-transparent.png" alt="Sompay" />
                 <div className="logo-pulse"></div>
               </div>
             </div>

@@ -44,6 +44,14 @@
   gap: 0.5rem;
 }
 
+.brand-logo-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+}
+
 .logo-text {
   font-family: var(--font-heading);
   font-size: 1.5rem;
